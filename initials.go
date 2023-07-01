@@ -15,7 +15,7 @@ type generatorOptions struct {
 	// Separator is the separator to use between the initials
 	Separator string
 
-	// Sensitive is a boolean to indicate if the initials should be case sensitive
+	// Sensitive is a boolean to indicate if the initials should be case-sensitive
 	Sensitive bool
 
 	// Lowercase is a boolean to indicate if the initials should be lowercase

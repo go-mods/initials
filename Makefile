@@ -1,5 +1,5 @@
 .PHONY: all
-all: clean generate vet fmt lint test tidy gosec
+all: clean generate tidy vet fmt lint test gosec
 
 clean:
 	$(call print-target)
@@ -10,6 +10,11 @@ clean:
 generate:
 	$(call print-target)
 	@go generate ./...
+
+.PHONY: tidy
+tidy:
+	$(call print-target)
+	@go mod tidy
 
 .PHONY: vet
 vet:
@@ -31,11 +36,6 @@ test:
 	$(call print-target)
 	@go test -race -covermode=atomic -coverprofile=coverage.out ./...
 	@go tool cover -html=coverage.out -o coverage.html
-
-.PHONY: tidy
-tidy:
-	$(call print-target)
-	@go mod tidy
 
 .PHONY: gosec
 gosec:
