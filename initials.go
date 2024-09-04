@@ -60,12 +60,12 @@ func GetInitials(name string, options ...Option) string {
 		remainingLength: 2,
 	}
 
-	// Set the generator options
+	// Apply the provided options to the generator options
 	for _, option := range options {
 		option(&opts)
 	}
 
-	// Replace special characters
+	// Replace special characters if specified
 	if !opts.SpecialChars {
 		opts.Name = replaceSpecialCharacters(opts.Name)
 	}
@@ -73,7 +73,7 @@ func GetInitials(name string, options ...Option) string {
 	// Replace with friendly characters
 	opts.Name = replaceFriendlyCharacters(opts.Name)
 
-	// split the name into words by spaces and hyphens
+	// Split the name into words by spaces and hyphens
 	words := strings.FieldsFunc(opts.Name, func(r rune) bool {
 		return r == ' ' || r == '-'
 	})
@@ -83,7 +83,7 @@ func GetInitials(name string, options ...Option) string {
 		return ""
 	}
 
-	// If WordLength is set, set the length to the number of words
+	// If WordLength is set, adjust the length to the number of words
 	if opts.WordLength {
 		opts.Length = len(words)
 		opts.remainingLength = len(words)
@@ -199,12 +199,14 @@ func WithWordLength() Option {
 	}
 }
 
+// replaceSpecialCharacters removes special characters from the name using regex
 func replaceSpecialCharacters(name string) string {
 	// replace special characters using regex
 	re := regexp.MustCompile("/[!@#$%^&*(),.?\":{}|<>_]/")
 	return re.ReplaceAllString(name, "")
 }
 
+// replaceFriendlyCharacters replaces friendly characters with their English equivalents
 func replaceFriendlyCharacters(name string) string {
 
 	// replace friendly characters with their english equivalent
