@@ -147,3 +147,6 @@ fabric.properties
 coverage.*
 
 *todo*
+
+# Task cache (checksums of sources)
+.task/checksum/

@@ -213,7 +213,7 @@ func replaceFriendlyCharacters(name string) string {
 	// iterate replaceFriendlyCharacters map
 	for key, value := range friendlyCharactersMap {
 		for _, char := range value {
-			name = strings.Replace(name, char, key, -1)
+			name = strings.ReplaceAll(name, char, key)
 		}
 	}
 
