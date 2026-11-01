@@ -39,6 +39,9 @@ func TestGetInitials_Separator(t *testing.T) {
 	runTestCases(t, []testCase{
 		{title: "dot", input: "John Doe", options: []Option{WithSeparator(".")}, want: "J.D"},
 		{title: "hyphen", input: "John Doe", options: []Option{WithSeparator("-")}, want: "J-D"},
+		{title: "length above the number of characters", input: "John Doe", options: []Option{WithLength(10), WithSeparator(".")}, want: "J.DOE"},
+		{title: "length reached before the last word", input: "John David Dugga", options: []Option{WithSeparator(".")}, want: "J.D"},
+		{title: "single word", input: "John", options: []Option{WithLength(10), WithSeparator(".")}, want: "JOHN"},
 	})
 }
 

@@ -177,8 +177,8 @@ func GetInitials(name string, options ...Option) string {
 		// Add the initial
 		initials += initial
 
-		// Add the separator
-		if len(initials) > 0 && opts.remainingLength > 0 {
+		// Add the separator between two words
+		if i < len(words)-1 && opts.remainingLength > 0 {
 			initials += opts.Separator
 		}
 	}
