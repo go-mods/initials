@@ -1,11 +1,57 @@
+// Package initials computes the initials of a name.
+//
+// By default, the result holds two uppercase characters. Words are separated by spaces and
+// hyphens, special characters are removed and accented or non-Latin letters listed in the
+// character table are transliterated to their English equivalent. Characters missing from
+// the table, such as emoji or CJK ideographs, are kept as they are.
+//
+// Example usage:
+//
+//	initials.GetInitials("John Doe")                                       // JD
+//	initials.GetInitials("John Doe", initials.WithLength(3))               // JDO
+//	initials.GetInitials("John Doe", initials.WithSeparator("."))          // J.D
 package initials
 
 import (
+	"cmp"
 	"math"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
+
+// specialCharacters matches the characters removed from a name before computing its initials
+var specialCharacters = regexp.MustCompile(`[!@#$%^&*(),.?":{}|<>_]`)
+
+// friendlyCharacters replaces the characters of friendlyCharactersMap with their English equivalents
+var friendlyCharacters = newFriendlyCharacters()
+
+// newFriendlyCharacters builds the replacer of friendlyCharactersMap. The longest characters
+// come first because a replacer tries them in order: a character made of several runes must
+// take precedence over the runes it contains.
+func newFriendlyCharacters() *strings.Replacer {
+	equivalents := make(map[string]string)
+	characters := make([]string, 0)
+	for equivalent, values := range friendlyCharactersMap {
+		for _, value := range values {
+			equivalents[value] = equivalent
+			characters = append(characters, value)
+		}
+	}
+
+	slices.SortFunc(characters, func(a, b string) int {
+		return cmp.Or(cmp.Compare(len(b), len(a)), cmp.Compare(a, b))
+	})
+	characters = slices.Compact(characters)
+
+	pairs := make([]string, 0, 2*len(characters))
+	for _, character := range characters {
+		pairs = append(pairs, character, equivalents[character])
+	}
+	return strings.NewReplacer(pairs...)
+}
 
 // generatorOptions is a struct to hold the options for the initials generator
 type generatorOptions struct {
@@ -27,9 +73,6 @@ type generatorOptions struct {
 	// CamelCase is a boolean to indicate if the initials should be camel case
 	CamelCase bool
 
-	// SpecialChars is a boolean to indicate if the initials should contain special characters
-	SpecialChars bool
-
 	// Length is the maximum length of the initials
 	Length int
 
@@ -43,7 +86,17 @@ type generatorOptions struct {
 // Option is a function to set the generatorOptions for the initials generator
 type Option func(*generatorOptions)
 
-// GetInitials returns the initials of a name
+// GetInitials returns the initials of a name, in uppercase and limited to two characters by
+// default. The options change the case, the length and the separator.
+//
+// The length counts characters, not bytes, and excludes separators. When the requested length
+// exceeds the number of words, the extra characters are taken from the last words. A name
+// without any word, or a length of zero or less, gives an empty string.
+//
+// Example:
+//
+//	GetInitials("John Doe")                                  // JD
+//	GetInitials("John Doe", WithLength(3), WithCamelCase())  // JDo
 func GetInitials(name string, options ...Option) string {
 
 	// Set the default generator options
@@ -54,7 +107,6 @@ func GetInitials(name string, options ...Option) string {
 		Lowercase:       false,
 		Uppercase:       true,
 		CamelCase:       false,
-		SpecialChars:    false,
 		Length:          2,
 		WordLength:      false,
 		remainingLength: 2,
@@ -65,13 +117,11 @@ func GetInitials(name string, options ...Option) string {
 		option(&opts)
 	}
 
-	// Replace special characters if specified
-	if !opts.SpecialChars {
-		opts.Name = replaceSpecialCharacters(opts.Name)
-	}
+	// Remove special characters
+	opts.Name = specialCharacters.ReplaceAllString(opts.Name, "")
 
 	// Replace with friendly characters
-	opts.Name = replaceFriendlyCharacters(opts.Name)
+	opts.Name = friendlyCharacters.Replace(opts.Name)
 
 	// Split the name into words by spaces and hyphens
 	words := strings.FieldsFunc(opts.Name, func(r rune) bool {
@@ -93,7 +143,7 @@ func GetInitials(name string, options ...Option) string {
 	initials := ""
 	for i, word := range words {
 		// If the initials should be limited to a certain length, return the initials
-		if opts.remainingLength == 0 {
+		if opts.remainingLength <= 0 {
 			return initials
 		}
 
@@ -122,7 +172,7 @@ func GetInitials(name string, options ...Option) string {
 		initial := getInitial(word, length, &opts)
 
 		// Reduce the remaining length
-		opts.remainingLength -= len(initial)
+		opts.remainingLength -= utf8.RuneCountInString(initial)
 
 		// Add the initial
 		initials += initial
@@ -197,28 +247,6 @@ func WithWordLength() Option {
 	return func(o *generatorOptions) {
 		o.WordLength = true
 	}
-}
-
-// replaceSpecialCharacters removes special characters from the name using regex
-func replaceSpecialCharacters(name string) string {
-	// replace special characters using regex
-	re := regexp.MustCompile("/[!@#$%^&*(),.?\":{}|<>_]/")
-	return re.ReplaceAllString(name, "")
-}
-
-// replaceFriendlyCharacters replaces friendly characters with their English equivalents
-func replaceFriendlyCharacters(name string) string {
-
-	// replace friendly characters with their english equivalent
-	// iterate replaceFriendlyCharacters map
-	for key, value := range friendlyCharactersMap {
-		for _, char := range value {
-			name = strings.ReplaceAll(name, char, key)
-		}
-	}
-
-	re := regexp.MustCompile(`/[^\x20-\x7E]/u`)
-	return re.ReplaceAllString(name, "")
 }
 
 // getInitial returns the first character of a word
