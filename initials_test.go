@@ -2,7 +2,9 @@ package initials
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
@@ -130,7 +132,71 @@ func TestGetInitials_FriendlyCharacters(t *testing.T) {
 		{title: "cyrillic ghe with upturn", input: "Ґалина Doe", want: "GD"},
 		{title: "non-breaking space", input: "John Doe", want: "JD"},
 		{title: "character made of several runes", input: "ို", options: []Option{WithLength(1)}, want: "O"},
+		{title: "cyrillic capital i", input: "Иван Петров", want: "IP"},
+		{title: "cyrillic capital ghe", input: "Георгий Doe", want: "GD"},
+		{title: "cyrillic sign removed", input: "Ьа", want: "A"},
+		{title: "only cyrillic signs", input: "ьъ", want: ""},
+		{title: "extended cyrillic", input: "Җамал Ҽ", want: "ZC"},
+		{title: "greek capital gamma", input: "Γιώργος Παπαδόπουλος", want: "GP"},
+		{title: "greek theta", input: "Θεόδωρος", want: "TH"},
+		{title: "greek eta", input: "Ηλίας", want: "EL"},
+		{title: "greek chi", input: "Χρήστος", want: "CH"},
+		{title: "polytonic greek", input: "Ῥόδος", want: "RO"},
+		{title: "arabic ain", input: "عمر", want: "AM"},
+		{title: "arabic qaf", input: "قاسم", want: "QA"},
+		{title: "arabic waw", input: "وليد", want: "WL"},
+		{title: "georgian", input: "გიორგი", want: "GI"},
+		{title: "georgian phar", input: "ფირუზა", want: "PI"},
+		{title: "burmese", input: "ဖြိုး", want: "PH"},
+		{title: "devanagari", input: "राम", want: "RA"},
+		{title: "devanagari conjunct", input: "कृष्ण", want: "KR"},
 	})
+}
+
+// Each letter of these ranges must have an equivalent, identical for both cases.
+func TestFriendlyCharactersMap_Alphabets(t *testing.T) {
+	equivalents := make(map[rune]string)
+	for equivalent, characters := range friendlyCharactersMap {
+		for _, character := range characters {
+			if utf8.RuneCountInString(character) == 1 {
+				equivalents[[]rune(character)[0]] = equivalent
+			}
+		}
+	}
+
+	alphabets := []struct {
+		title    string
+		from, to rune
+	}{
+		{title: "cyrillic", from: 0x0400, to: 0x04FF},
+		{title: "greek", from: 0x0370, to: 0x03E1},
+		{title: "greek symbols", from: 0x03F0, to: 0x03FF},
+		{title: "polytonic greek", from: 0x1F00, to: 0x1FFF},
+		{title: "arabic", from: 0x0621, to: 0x064A},
+		{title: "burmese", from: 0x1000, to: 0x1021},
+		{title: "georgian", from: 0x10D0, to: 0x10FA},
+		{title: "georgian capitals", from: 0x1C90, to: 0x1CBA},
+		{title: "devanagari", from: 0x0905, to: 0x0939},
+	}
+
+	for _, alphabet := range alphabets {
+		t.Run(alphabet.title, func(t *testing.T) {
+			for r := alphabet.from; r <= alphabet.to; r++ {
+				if !unicode.IsLetter(r) || unicode.Is(unicode.Lm, r) {
+					continue
+				}
+
+				equivalent, found := equivalents[r]
+				if !assert.True(t, found, "no equivalent for %c (%U)", r, r) {
+					continue
+				}
+
+				if upper, found := equivalents[unicode.ToUpper(r)]; found {
+					assert.True(t, strings.EqualFold(equivalent, upper), "%c (%U) gives %q, %c gives %q", r, r, equivalent, unicode.ToUpper(r), upper)
+				}
+			}
+		})
+	}
 }
 
 // A character listed under several equivalents would make the result depend on the order of
